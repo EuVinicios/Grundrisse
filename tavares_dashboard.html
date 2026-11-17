@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='8' height='8' fill='%235aa9ff'/><rect x='8' width='8' height='8' fill='%23ff6b6b'/><rect y='8' width='8' height='8' fill='%23ffb454'/><rect x='8' y='8' width='8' height='8' fill='%234fd08a'/></svg>">
+<title>Tavares SFC — Termômetro de Transição de Regime</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#171e2e; --panel2:#1e2740; --ink:#e8edf7; --muted:#9aa7c2;
+    --line:#2a3550; --accent:#5aa9ff; --warn:#ffb454; --bad:#ff6b6b; --good:#4fd08a;
+    --r1:#5aa9ff; --r2:#ff6b6b; --r3:#ffb454; --r4:#4fd08a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{padding:20px 24px 12px;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 4px;font-size:20px}
+  h2{font-size:15px;margin:0 0 10px;color:var(--ink)}
+  h3{font-size:13px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .sub{color:var(--muted);font-size:13px;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px 48px}
+  .banner{margin:14px 0;padding:10px 14px;border-radius:8px;font-size:12.5px;
+    background:#2a2410;border:1px solid #5c4d1f;color:#ffe6a8}
+  .tabs{display:flex;gap:8px;margin:16px 0}
+  .tab{padding:9px 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+    color:var(--muted);cursor:pointer;font-size:14px}
+  .tab.active{background:var(--accent);color:#06121f;border-color:var(--accent);font-weight:600}
+  .panel{display:none}
+  .panel.active{display:block}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:860px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card.tight{padding:12px}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--muted);margin:2px 4px 2px 0}
+  .badge.ok{color:var(--good);border-color:#2c5c40}
+  .badge.no{color:var(--bad);border-color:#5c2c2c}
+  .badge.real{color:var(--accent);border-color:#2c4a5c}
+  .badge.ilus{color:var(--warn);border-color:#5c4d1f}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:0}
+  .kv b{font-variant-numeric:tabular-nums}
+  .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+  .regime-tag{font-size:15px;font-weight:600}
+  svg{display:block;width:100%;height:auto}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+  th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600}
+  tr.above td{color:var(--warn)}
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
+  @media(max-width:860px){.controls{grid-template-columns:1fr}}
+  .ctl label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-bottom:2px}
+  .ctl output{color:var(--ink);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    border-radius:6px;padding:5px 7px;font-size:13px}
+  select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:6px 8px;font-size:13px}
+  .btn{padding:9px 18px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);
+    color:#06121f;font-weight:600;cursor:pointer;font-size:14px}
+  .btn.ghost{background:transparent;color:var(--muted);border-color:var(--line);font-weight:400}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .x0grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  @media(max-width:860px){.x0grid{grid-template-columns:repeat(4,1fr)}}
+  .x0grid label{font-size:11px;color:var(--muted);display:block;margin-bottom:2px}
+  .meter{height:14px;border-radius:7px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+  .meter>span{display:block;height:100%}
+  .barrow{display:grid;grid-template-columns:1fr 120px 52px;gap:8px;align-items:center;margin:5px 0;font-size:12px}
+  .barrow .track{height:12px;border-radius:6px;background:var(--panel2);overflow:hidden}
+  .barrow .track>span{display:block;height:100%}
+  .barrow .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  footer{margin-top:28px;padding:16px 24px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .note{font-size:11.5px;color:var(--muted);margin-top:8px}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding-bottom:0">
+    <h1>Economia política de M. C. Tavares — modelo SFC·ODE·Markov</h1>
+    <p class="sub">Termômetro Composto de Transição de Regime · dados reais (SEC / Banco Mundial / CBOE / Tesouro) + simulação interativa no navegador</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="banner">
+    <b>Leitura honesta.</b> Duas visões separadas, sem misturar escalas:
+    <b>Dados reais</b> = índices empíricos + limiares data-driven (quantis);
+    <b>Simulação do modelo</b> = trajetória + calibração <b>ilustrativa</b> (não observada).
+    Limiares são escolhas de quantil, não constantes naturais. Ferramenta de cenário/alerta —
+    <b>não é preditor validado em tempo real</b>. Nada é fabricado; série ausente é omitida e reportada.
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="btnReal">Dados reais</div>
+    <div class="tab" id="btnModel">Simulação do modelo</div>
+  </div>
+
+  <!-- ============================ ABA: DADOS REAIS ============================ -->
+  <section class="panel active" id="panelReal">
+    <div class="card tight" style="margin-bottom:16px">
+      <h3>Alcançabilidade das fontes (sem chave)</h3>
+      <div id="reachBox"></div>
+      <div class="note" id="missingBox"></div>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:16px">
+      <div class="card">
+        <h3>Limiares data-driven <span class="badge real">observados</span></h3>
+        <div id="thrBox"></div>
+        <div class="note" id="thrProv"></div>
+      </div>
+      <div class="card">
+        <h3>Snapshot corrente — último ano comum <span class="badge real" id="snapYear"></span></h3>
+        <div id="snapBox"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h3 style="margin:0">Leitura empírica por ano (Φ∩Ω∩Σ)</h3>
+        <div class="row"><span class="small muted">ano</span><select id="yearSelect"></select></div>
+      </div>
+      <div class="grid g2">
+        <div id="yearIndices"></div>
+        <div id="yearThermo"></div>
+      </div>
+      <div class="note">Recomputado no navegador com o mesmo núcleo do modelo (<code>thermometerFromIndices</code>) e limiares reais. dK usa o valor ilustrativo do ponto fixo (~0).</div>
+    </div>
+
+    <div class="grid g3" style="margin-bottom:16px">
+      <div class="card tight"><h3>Φ — ponte dinheiro-máquinas <span class="badge real">SEC</span></h3><div id="chartPhi"></div></div>
+      <div class="card tight"><h3>Ω — sobrecarga fiscal <span class="badge real">BM</span></h3><div id="chartOmega"></div></div>
+      <div class="card tight"><h3>Σ — risco sistêmico <span class="badge real">VIX</span></h3><div id="chartSigma"></div></div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h3>Φ recente — ciclo de CapEx de IA <span class="badge real">SEC EDGAR</span></h3>
+        <div id="recentTable"></div>
+        <div class="note">Valores em US$ bilhões (agregado MSFT/GOOGL/AMZN/META). <span style="color:var(--warn)">Amarelo</span> = Φ acima de Φ*.</div>
+      </div>
+      <div class="card">
+        <h3>Pressão composta e regime dominante por ano</h3>
+        <div id="compChart"></div>
+        <div class="legend" id="compLegend"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================== ABA: SIMULAÇÃO ========================== -->
+  <section class="panel" id="panelModel">
+    <div class="banner" style="background:#10202a;border-color:#1f4a5c;color:#a8d8ff">
+      <b>Calibração ILUSTRATIVA.</b> Os parâmetros e limiares abaixo <b>não são dados observados</b>.
+      Os sliders re-rodam a simulação ODE+Markov ao vivo (<code>simulateCoupled</code>). O painel de
+      ponto fixo / autovalores / bifurcações é <b>baseline pré-computado em Python</b> (não re-diagonalizado pelos sliders).
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>Parâmetros e limiares (ilustrativos)</h3>
+      <div class="controls" id="sliders"></div>
+      <h3 style="margin-top:16px">Estado inicial x₀ = (F, L, M, D, u, s, ρ)</h3>
+      <div class="x0grid" id="x0grid"></div>
+      <div class="row" style="margin-top:14px">
+        <div class="ctl" style="width:120px"><label>seed</label><input type="number" id="seedInput" value="42" step="1"></div>
+        <div class="ctl" style="width:120px"><label>t_end (anos)</label><input type="number" id="tEndInput" value="40" step="1" min="1"></div>
+        <div class="ctl" style="width:120px"><label>dt</label><input type="number" id="dtInput" value="0.05" step="0.01" min="0.005"></div>
+        <button class="btn" id="runBtn">Rodar simulação</button>
+        <button class="btn ghost" id="resetBtn">Restaurar padrões</button>
+        <span class="small muted" id="simStatus"></span>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:16px">
+      <div class="card tight"><h3>Bloco corporativo — F (capital ilíquido) e L (liquidez)</h3><div id="chartFL"></div></div>
+      <div class="card tight"><h3>Bloco fiscal-laboral — D (dívida) e u (desemprego tecnológico)</h3><div id="chartDU"></div></div>
+    </div>
+    <div class="grid g2" style="margin-bottom:16px">
+      <div class="card tight"><h3>Índices de tensão vs limiares ilustrativos</h3><div id="chartIdx"></div></div>
+      <div class="card tight"><h3>Probabilidades de regime (Markov endógeno) + pressão</h3><div id="chartProbs"></div></div>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:16px">
+      <div class="card">
+        <h3>Fração de tempo em cada atractor</h3>
+        <div id="fracBars"></div>
+        <div class="note" id="simEnd"></div>
+      </div>
+      <div class="card">
+        <h3>Ponto fixo e estabilidade local <span class="badge ilus">pré-computado · Python</span></h3>
+        <div id="fpBox"></div>
+        <h3 style="margin-top:12px">Autovalores da jacobiana</h3>
+        <div id="eigBox"></div>
+      </div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card tight">
+        <h3>Bifurcação em nu_info <span class="badge ilus">pré-computado</span></h3>
+        <div id="bifNuChart"></div>
+        <div class="note">Real líder e par complexo (Hopf quando cruza 0). Traço cinza = 0. Ausência de ponto fixo interior = sela-nó (fold).</div>
+      </div>
+      <div class="card tight">
+        <h3>Bifurcação em r_L <span class="badge ilus">pré-computado</span></h3>
+        <div id="bifRlTable"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap" style="padding:0">
+    <b>Procedência e limites.</b>
+    Φ real: SEC EDGAR XBRL (CapEx/tesouraria dos hiperescaladores), 2011–2025.
+    Ω real: Banco Mundial (u, D, arrecadação, juro real); 2022–2024 usam proxy ex-post documentado
+    (10A Tesouro − inflação BM). Σ real: VIX médio anual (CBOE), normalização (VIX/100)² = variância implícita;
+    <b>componente vol-FX ausente</b>; nu_info e ρ ilustrativos. Limiares Φ*/Ω*/Σ* = quantis (padrão 90%) das séries reais.
+    A aba de simulação usa calibração ilustrativa e <b>não</b> se mistura com os limiares reais.
+    Núcleo: <code>tavares_sfc.py</code> (fonte de verdade) → port <code>tavares_model.js</code> (fidelidade verificada por <code>test_model.js</code>).
+    Regimes: R1 centralização oligopolista por queima de capital · R2 crise sistêmica monetária/soberana ·
+    R3 barbárie social e paralisia de governabilidade · R4 reconfiguração estatal top-down.
+  </div>
+</footer>
+
+<script src="dashboard_data.js"></script>
+<script src="tavares_model.js"></script>
+<script>
+"use strict";
+const M = TavaresModel;
+const R = DATA.real, MOD = DATA.model;
+const RC = {1:"var(--r1)",2:"var(--r2)",3:"var(--r3)",4:"var(--r4)"};
+const RHEX = {1:"#5aa9ff",2:"#ff6b6b",3:"#ffb454",4:"#4fd08a"};
+const $ = (id) => document.getElementById(id);
+const fmt = (v,d=3) => (v==null||!isFinite(v)) ? "—" : Number(v).toFixed(d);
+const pct = (v) => (100*v).toFixed(1)+"%";
+const esc = (s) => String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+/* ---------------- helpers de gráfico SVG (vanilla, offline) ---------------- */
+function tickFmt(v){const a=Math.abs(v);if(a>=100)return v.toFixed(0);if(a>=1)return v.toFixed(2);if(a===0)return"0";return v.toFixed(3);}
+function lineChart(el, series, opt){
+  opt=opt||{};
+  const W=opt.width||620,H=opt.height||250,m={l:50,r:14,t:14,b:34};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  let xs=[],ys=[];
+  series.forEach(s=>s.points.forEach(pt=>{if(pt[1]!=null&&isFinite(pt[1])){xs.push(pt[0]);ys.push(pt[1]);}}));
+  (opt.thresholds||[]).forEach(t=>ys.push(t.y));
+  if(!xs.length){el.innerHTML='<div class="muted small">sem dados</div>';return;}
+  let x0=opt.xDomain?opt.xDomain[0]:Math.min(...xs), x1=opt.xDomain?opt.xDomain[1]:Math.max(...xs);
+  let y0=opt.yDomain?opt.yDomain[0]:Math.min(...ys), y1=opt.yDomain?opt.yDomain[1]:Math.max(...ys);
+  if(x1===x0)x1=x0+1; if(y1===y0){y1=y0+1;}
+  const pad=(y1-y0)*0.08; y0-=pad; y1+=pad;
+  const X=v=>m.l+(v-x0)/(x1-x0)*iw, Y=v=>m.t+ih-(v-y0)/(y1-y0)*ih;
+  const xf=opt.xTickFmt||tickFmt;
+  let g='';
+  for(let i=0;i<=4;i++){
+    const xv=x0+(x1-x0)*i/4, yv=y0+(y1-y0)*i/4;
+    g+=`<line x1="${X(xv).toFixed(1)}" y1="${m.t}" x2="${X(xv).toFixed(1)}" y2="${m.t+ih}" stroke="#222c46" stroke-width="1"/>`;
+    g+=`<line x1="${m.l}" y1="${Y(yv).toFixed(1)}" x2="${m.l+iw}" y2="${Y(yv).toFixed(1)}" stroke="#222c46" stroke-width="1"/>`;
+    g+=`<text x="${X(xv).toFixed(1)}" y="${H-12}" fill="#9aa7c2" font-size="10" text-anchor="middle">${xf(xv)}</text>`;
+    g+=`<text x="${m.l-6}" y="${(Y(yv)+3).toFixed(1)}" fill="#9aa7c2" font-size="10" text-anchor="end">${tickFmt(yv)}</text>`;
+  }
+  (opt.thresholds||[]).forEach(t=>{
+    if(t.y<y0||t.y>y1)return;
+    g+=`<line x1="${m.l}" y1="${Y(t.y).toFixed(1)}" x2="${m.l+iw}" y2="${Y(t.y).toFixed(1)}" stroke="${t.color||'#8899bb'}" stroke-width="1" stroke-dasharray="5 4"/>`;
+    g+=`<text x="${m.l+iw-2}" y="${(Y(t.y)-4).toFixed(1)}" fill="${t.color||'#8899bb'}" font-size="10" text-anchor="end">${esc(t.label||'')}</text>`;
+  });
+  series.forEach(s=>{
+    const pts=s.points.filter(pt=>pt[1]!=null&&isFinite(pt[1]));
+    if(!pts.length)return;
+    const d=pts.map((pt,i)=>(i?'L':'M')+X(pt[0]).toFixed(1)+' '+Y(pt[1]).toFixed(1)).join(' ');
+    g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width||1.8}" ${s.dash?'stroke-dasharray="4 3"':''}/>`;
+  });
+  g+=`<line x1="${m.l}" y1="${m.t+ih}" x2="${m.l+iw}" y2="${m.t+ih}" stroke="#3a466a" stroke-width="1"/>`;
+  g+=`<line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${m.t+ih}" stroke="#3a466a" stroke-width="1"/>`;
+  if(opt.xLabel)g+=`<text x="${m.l+iw/2}" y="${H-1}" fill="#9aa7c2" font-size="10" text-anchor="middle">${esc(opt.xLabel)}</text>`;
+  let legend='';
+  series.forEach(s=>{legend+=`<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`;});
+  (opt.thresholds||[]).forEach(t=>{legend+=`<span><i style="background:${t.color||'#8899bb'}"></i>${esc(t.label||'limiar')}</span>`;});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">${g}</svg>`+
+    (opt.noLegend?'':`<div class="legend">${legend}</div>`);
+}
+function probBars(el, probs, labels){
+  let h='';
+  for(let i=0;i<4;i++){
+    const v=probs[i]||0;
+    h+=`<div class="barrow"><span style="color:${RHEX[i+1]}">R${i+1} · ${esc(labels[i])}</span>`+
+       `<span class="track"><span style="width:${(100*v).toFixed(1)}%;background:${RHEX[i+1]}"></span></span>`+
+       `<span class="val">${pct(v)}</span></div>`;
+  }
+  el.innerHTML=h;
+}
+function gauge(el, pressure){
+  const p=Math.max(0,Math.min(1,pressure));
+  const col=p<0.15?'var(--good)':p<0.5?'var(--warn)':'var(--bad)';
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="muted small">pressão de transição</span>`+
+    `<b class="big" style="color:${col}">${p.toFixed(3)}</b></div>`+
+    `<div class="meter"><span style="width:${(100*p).toFixed(1)}%;background:${col}"></span></div>`+
+    `<div class="note">0 = nenhum limiar cruzado · 1 = transição plenamente ativa (relu das margens ao quadrado).</div>`;
+}
+const regimeLabels = [1,2,3,4].map(i=>MOD.regimes[String(i)]);
+
+/* ------------------------------- ABA REAL ------------------------------- */
+function renderReach(){
+  const names={fred:"FRED",worldbank:"Banco Mundial",sec:"SEC EDGAR",vix:"CBOE VIX",treasury:"Tesouro EUA"};
+  let h='';
+  for(const k in names){const ok=R.reachability[k];h+=`<span class="badge ${ok?'ok':'no'}">${names[k]}: ${ok?'alcançável':'bloqueado'}</span>`;}
+  $('reachBox').innerHTML=h;
+  $('missingBox').innerHTML = R.missing&&R.missing.length ? 'Ausente/omitido: '+esc(R.missing.join('; ')) : 'Todas as fontes usadas responderam.';
+}
+function renderThresholds(){
+  const t=R.thresholds;
+  $('thrBox').innerHTML=
+    `<div class="kv"><span>Φ* (ponte dinheiro-máquinas)</span><b>${fmt(t.Phi_star,4)}</b></div>`+
+    `<div class="kv"><span>Ω* (tolerância fiscal)</span><b>${fmt(t.Omega_star,4)}</b></div>`+
+    `<div class="kv"><span>Σ* (risco sistêmico)</span><b>${fmt(t.Sigma_star,4)}</b></div>`+
+    `<div class="kv"><span>quantil</span><b>${pct(t.quantile)}</b></div>`;
+  let p='';for(const k in t.provenance)p+=`<div class="note"><b>${k.replace('_star','*')}:</b> ${esc(t.provenance[k])}</div>`;
+  $('thrProv').innerHTML=p;
+}
+function thermoCard(idx, th, prov){
+  const margins=th.margins;
+  let h=`<div class="row" style="justify-content:space-between;align-items:baseline">`+
+    `<span class="regime-tag" style="color:${RHEX[th.dominant_regime]}">R${th.dominant_regime} dominante</span>`+
+    `<span class="small muted">${esc(th.dominant_label)}</span></div>`;
+  h+=`<div style="margin:8px 0" id="gaugeSlot"></div>`;
+  h+=`<div id="probSlot"></div>`;
+  h+=`<div style="margin-top:10px">`+
+    `<div class="kv"><span>Φ (limiar ${fmt(idx.PhiStar,4)})</span><b>${fmt(idx.Phi,4)} <span class="muted small">(${margins.dPhi>=0?'+':''}${fmt(margins.dPhi,4)})</span></b></div>`+
+    `<div class="kv"><span>Ω (limiar ${fmt(idx.OmegaStar,4)})</span><b>${fmt(idx.Omega,3)} <span class="muted small">(${margins.dOmega>=0?'+':''}${fmt(margins.dOmega,3)})</span></b></div>`+
+    `<div class="kv"><span>Σ (limiar ${fmt(idx.SigmaStar,4)})</span><b>${fmt(idx.Sigma,4)} <span class="muted small">(${margins.dSigma>=0?'+':''}${fmt(margins.dSigma,4)})</span></b></div>`+
+    `<div class="kv"><span>sustentabilidade da dívida (Ω−1)</span><b>${fmt(margins.debt_sustainability,3)}</b></div></div>`;
+  if(prov)h+=`<div class="note">${esc(prov)}</div>`;
+  return h;
+}
+function renderSnapshot(){
+  const s=R.snapshot;
+  if(!s){$('snapBox').innerHTML='<span class="muted">sem ano comum Φ∩Ω∩Σ</span>';$('snapYear').textContent='—';return;}
+  $('snapYear').textContent=String(s.year);
+  const t=R.thresholds;
+  const idx={Phi:s.Phi,Omega:s.Omega,Sigma:s.Sigma,PhiStar:t.Phi_star,OmegaStar:t.Omega_star,SigmaStar:t.Sigma_star};
+  const th={margins:s.margins,dominant_regime:s.dominant,dominant_label:MOD.regimes[String(s.dominant)]};
+  $('snapBox').innerHTML=thermoCard(idx,th,`u=${fmt(s.u,3)} · D=${fmt(s.D,3)} · s(cross)=${s.s==null?'—':fmt(s.s,5)} · dK=${fmt(s.dK,3)}`);
+  gauge($('snapBox').querySelector('#gaugeSlot'), s.pressure);
+  probBars($('snapBox').querySelector('#probSlot'), s.probs, regimeLabels);
+}
+function pEst(){
+  const t=R.thresholds;
+  return Object.assign(M.defaultParams(),{Phi_star:t.Phi_star,Omega_star:t.Omega_star,Sigma_star:t.Sigma_star});
+}
+function renderYearSelect(){
+  const comp=R.composite||[];
+  const sel=$('yearSelect');
+  sel.innerHTML=comp.map(c=>`<option value="${c.year}">${c.year}</option>`).join('');
+  if(comp.length)sel.value=String(comp[comp.length-1].year);
+  sel.onchange=()=>renderYear(+sel.value);
+  if(comp.length)renderYear(+sel.value);
+}
+function renderYear(y){
+  const c=(R.composite||[]).find(c=>c.year===y);
+  if(!c)return;
+  const p=pEst();
+  const th=M.thermometerFromIndices(c.Phi,c.Omega,c.Sigma,c.dK,p);
+  const t=R.thresholds;
+  const idx={Phi:c.Phi,Omega:c.Omega,Sigma:c.Sigma,PhiStar:t.Phi_star,OmegaStar:t.Omega_star,SigmaStar:t.Sigma_star};
+  $('yearIndices').innerHTML=
+    `<div class="kv"><span>Φ (SEC)</span><b>${fmt(c.Phi,4)}</b></div>`+
+    `<div class="kv"><span>Ω (BM)</span><b>${fmt(c.Omega,3)}</b></div>`+
+    `<div class="kv"><span>Σ (VIX)</span><b>${fmt(c.Sigma,4)}</b></div>`+
+    `<div class="kv"><span>u (desemprego)</span><b>${fmt(c.u,3)}</b></div>`+
+    `<div class="kv"><span>D (dívida)</span><b>${fmt(c.D,3)}</b></div>`+
+    `<div class="note">Ano ${y}. Limiares reais (quantil ${pct(t.quantile)}).</div>`;
+  $('yearThermo').innerHTML=thermoCard(idx,th,null);
+  gauge($('yearThermo').querySelector('#gaugeSlot'), th.transition_pressure);
+  probBars($('yearThermo').querySelector('#probSlot'), [1,2,3,4].map(i=>th.regime_probs[MOD.regimes[String(i)]]), regimeLabels);
+}
+function renderRealCharts(){
+  const t=R.thresholds;
+  const mk=(years,vals)=>years.map((y,i)=>[y,vals[i]]);
+  lineChart($('chartPhi'),[{label:"Φ real",color:"#5aa9ff",points:mk(R.years_phi,R.phi)}],
+    {thresholds:[{y:t.Phi_star,label:"Φ*",color:"#8899bb"}],xLabel:"ano",xTickFmt:v=>v.toFixed(0),height:210});
+  lineChart($('chartOmega'),[{label:"Ω real",color:"#ffb454",points:mk(R.years_omega,R.omega)}],
+    {thresholds:[{y:t.Omega_star,label:"Ω*",color:"#8899bb"},{y:1,label:"Ω=1",color:"#5c6b8a"}],xLabel:"ano",xTickFmt:v=>v.toFixed(0),height:210});
+  lineChart($('chartSigma'),[{label:"Σ real (VIX)",color:"#ff6b6b",points:mk(R.years_sigma,R.sigma)}],
+    {thresholds:[{y:t.Sigma_star,label:"Σ*",color:"#8899bb"}],xLabel:"ano",xTickFmt:v=>v.toFixed(0),height:210});
+}
+function renderRecent(){
+  const rows=R.recent_phi||[];
+  let h='<table><thead><tr><th>ano</th><th>Φ</th><th>margem vs Φ*</th><th>F ($B)</th><th>L ($B)</th><th>FCL ($B)</th><th>n</th></tr></thead><tbody>';
+  rows.forEach(r=>{h+=`<tr class="${r.above?'above':''}"><td>${r.year}</td><td>${fmt(r.phi,4)}</td><td>${r.margin>=0?'+':''}${fmt(r.margin,4)}</td><td>${fmt(r.F_B,0)}</td><td>${fmt(r.L_B,0)}</td><td>${fmt(r.FCL_B,0)}</td><td>${r.n}</td></tr>`;});
+  h+='</tbody></table>';
+  $('recentTable').innerHTML=h;
+}
+function renderComposite(){
+  const comp=R.composite||[];
+  const pts=comp.map(c=>[c.year,c.pressure]);
+  lineChart($('compChart'),[{label:"pressão composta",color:"#e8edf7",points:pts}],
+    {xLabel:"ano",xTickFmt:v=>v.toFixed(0),height:200,yDomain:[0,1],noLegend:true});
+  let leg='';for(let i=1;i<=4;i++)leg+=`<span><i style="background:${RHEX[i]}"></i>R${i}</span>`;
+  $('compLegend').innerHTML=leg+'<span class="muted">· dominante por ano: '+comp.map(c=>`<b style="color:${RHEX[c.dominant]}">${c.year}:R${c.dominant}</b>`).join(' ')+'</span>';
+}
+
+/* ----------------------------- ABA SIMULAÇÃO ----------------------------- */
+const SLIDERS=[
+  {key:'r_L',label:'r_L — juro real longo',min:0.005,max:0.08,step:0.001,d:3},
+  {key:'nu_info',label:'nu_info — velocidade algorítmica',min:0.2,max:4,step:0.05,d:2},
+  {key:'theta_ind',label:'theta_ind — indivisibilidade',min:0.1,max:1,step:0.01,d:2},
+  {key:'lam',label:'λ — usabilidade da liquidez',min:0.05,max:1.5,step:0.01,d:2},
+  {key:'delta',label:'δ — depreciação moral',min:0.02,max:0.4,step:0.01,d:2},
+  {key:'g1',label:'g1 — gasto social induzido',min:0,max:0.5,step:0.01,d:2},
+  {key:'fiscal_resp',label:'fiscal_resp — reação fiscal R4',min:0,max:3,step:0.05,d:2},
+  {key:'eps',label:'ε — retornos crescentes',min:1,max:2,step:0.01,d:2},
+  {key:'a_u',label:'a_u — automação (deslocamento)',min:0,max:0.5,step:0.01,d:2},
+  {key:'Phi_star',label:'Φ* (ilustrativo)',min:0.2,max:3,step:0.05,d:2},
+  {key:'Omega_star',label:'Ω* (ilustrativo)',min:0.5,max:3,step:0.05,d:2},
+  {key:'Sigma_star',label:'Σ* (ilustrativo)',min:0.05,max:1.5,step:0.05,d:2},
+];
+const X0NAMES=["F","L","M","D","u","s","ρ"];
+function buildControls(){
+  const def=M.defaultParams();
+  $('sliders').innerHTML=SLIDERS.map(s=>
+    `<div class="ctl"><label>${esc(s.label)}<output id="out_${s.key}">${def[s.key].toFixed(s.d)}</output></label>`+
+    `<input type="range" id="sl_${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${def[s.key]}"></div>`).join('');
+  SLIDERS.forEach(s=>{const el=$('sl_'+s.key);el.oninput=()=>{$('out_'+s.key).textContent=(+el.value).toFixed(s.d);$('simStatus').textContent='parâmetros alterados — clique em Rodar';};});
+  $('x0grid').innerHTML=X0NAMES.map((n,i)=>
+    `<div><label>${n}</label><input type="number" id="x0_${i}" step="0.01" value="${DATA.ref.x0[i]}"></div>`).join('');
+}
+function readParams(){
+  const p=M.defaultParams();
+  SLIDERS.forEach(s=>{p[s.key]=+$('sl_'+s.key).value;});
+  return p;
+}
+function readX0(){return X0NAMES.map((_,i)=>+$('x0_'+i).value);}
+function resetControls(){
+  const def=M.defaultParams();
+  SLIDERS.forEach(s=>{$('sl_'+s.key).value=def[s.key];$('out_'+s.key).textContent=def[s.key].toFixed(s.d);});
+  DATA.ref.x0.forEach((v,i)=>{$('x0_'+i).value=v;});
+  $('seedInput').value=42;$('tEndInput').value=40;$('dtInput').value=0.05;
+  runSim();
+}
+function runSim(){
+  const p=readParams(), x0=readX0();
+  const seed=+$('seedInput').value||42, tEnd=Math.max(1,+$('tEndInput').value||40), dt=Math.max(0.005,+$('dtInput').value||0.05);
+  const t0=performance.now();
+  const sim=M.simulateCoupled(x0,p,tEnd,dt,seed);
+  const ms=(performance.now()-t0).toFixed(0);
+  const n=sim.traj.length;
+  const idxTraj=sim.traj.map(x=>M.indices(x,p));
+  const series=(k)=>sim.t.map((t,i)=>[t,sim.traj[i][k]]);
+  lineChart($('chartFL'),[
+    {label:"F (capital ilíquido)",color:"#5aa9ff",points:series(0)},
+    {label:"L (liquidez)",color:"#4fd08a",points:series(1)}],{xLabel:"anos",height:230});
+  lineChart($('chartDU'),[
+    {label:"D (dívida soberana)",color:"#ff6b6b",points:series(3)},
+    {label:"u (desemprego tec.)",color:"#ffb454",points:series(4)}],{xLabel:"anos",height:230});
+  lineChart($('chartIdx'),[
+    {label:"Φ",color:"#5aa9ff",points:sim.t.map((t,i)=>[t,idxTraj[i].Phi])},
+    {label:"Ω",color:"#ffb454",points:sim.t.map((t,i)=>[t,idxTraj[i].Omega])},
+    {label:"Σ",color:"#ff6b6b",points:sim.t.map((t,i)=>[t,idxTraj[i].Sigma])}],
+    {thresholds:[{y:p.Phi_star,label:"Φ*",color:"#5aa9ff"},{y:p.Omega_star,label:"Ω*",color:"#ffb454"},{y:p.Sigma_star,label:"Σ*",color:"#ff6b6b"}],xLabel:"anos",height:230});
+  lineChart($('chartProbs'),[1,2,3,4].map(i=>({label:"R"+i,color:RHEX[i],points:sim.t.map((t,k)=>[t,sim.probs[k][i-1]])}))
+    .concat([{label:"pressão",color:"#e8edf7",dash:true,width:1.2,points:sim.t.map((t,k)=>[t,sim.pressure[k]])}]),
+    {xLabel:"anos",height:230,yDomain:[0,1]});
+  const counts=[0,0,0,0];sim.regimes.forEach(r=>counts[r-1]++);
+  const frac=counts.map(c=>c/n);
+  probBars($('fracBars'),frac,regimeLabels);
+  const xf=sim.traj[n-1];
+  $('simEnd').innerHTML=`Estado final: F=${fmt(xf[0])} L=${fmt(xf[1])} M=${fmt(xf[2])} D=${fmt(xf[3])} u=${fmt(xf[4])} s=${fmt(xf[5])} ρ=${fmt(xf[6])} · pressão final=${fmt(sim.pressure[n-1])}`;
+  $('simStatus').textContent=`${n} pontos · ${ms} ms · seed ${seed}`;
+}
+function renderBaseline(){
+  const fp=MOD.fixed_point;
+  let h=`<div class="kv"><span>convergiu</span><b>${fp.ok?'sim':'não'} · ||f||=${fp.res.toExponential(2)}</b></div>`;
+  fp.names.forEach((nm,i)=>{h+=`<div class="kv"><span>${nm}</span><b>${fmt(fp.x[i],4)}</b></div>`;});
+  h+=`<div class="note">${MOD.n_unstable} direção(ões) instável(is) → ponto fixo tipo sela (desequilíbrio estrutural, não equilíbrio geral).</div>`;
+  $('fpBox').innerHTML=h;
+  let e='<table><thead><tr><th>λ real</th><th>λ imag</th><th></th></tr></thead><tbody>';
+  MOD.eigenvalues.forEach(v=>{const tag=v.real>1e-6?'<span style="color:var(--bad)">INSTÁVEL</span>':(v.real<-1e-6?'<span class="muted">estável</span>':'neutro');
+    e+=`<tr><td>${v.real.toFixed(5)}</td><td>${v.imag>=0?'+':''}${v.imag.toFixed(5)}j</td><td style="text-align:left">${tag}</td></tr>`;});
+  e+='</tbody></table>';
+  $('eigBox').innerHTML=e;
+  const nu=MOD.bifurcation.nu_info.filter(r=>r.ok);
+  lineChart($('bifNuChart'),[
+    {label:"real líder",color:"#5aa9ff",points:nu.map(r=>[r.val,r.lead])},
+    {label:"par complexo (Hopf)",color:"#ff6b6b",points:nu.map(r=>[r.val,r.complex_real])}],
+    {thresholds:[{y:0,label:"0",color:"#8899bb"}],xLabel:"nu_info",height:220});
+  const rl=MOD.bifurcation.r_L;
+  let t='<table><thead><tr><th>r_L</th><th>real líder</th><th>instáveis</th><th>Φ</th><th>Ω</th><th>Σ</th></tr></thead><tbody>';
+  rl.forEach(r=>{if(!r.ok){t+=`<tr><td>${fmt(r.val,3)}</td><td colspan="5" class="muted" style="text-align:left">sem ponto fixo interior</td></tr>`;return;}
+    t+=`<tr><td>${fmt(r.val,3)}</td><td>${fmt(r.lead,4)}</td><td>${r.n_unstable}</td><td>${fmt(r.Phi,3)}</td><td>${fmt(r.Omega,3)}</td><td>${fmt(r.Sigma,3)}</td></tr>`;});
+  t+='</tbody></table>';
+  $('bifRlTable').innerHTML=t;
+}
+
+/* --------------------------------- tabs --------------------------------- */
+function showTab(which){
+  const real=which==='real';
+  $('btnReal').classList.toggle('active',real);
+  $('btnModel').classList.toggle('active',!real);
+  $('panelReal').classList.toggle('active',real);
+  $('panelModel').classList.toggle('active',!real);
+}
+$('btnReal').onclick=()=>showTab('real');
+$('btnModel').onclick=()=>showTab('model');
+$('runBtn').onclick=runSim;
+$('resetBtn').onclick=resetControls;
+
+/* --------------------------------- init --------------------------------- */
+renderReach();renderThresholds();renderSnapshot();renderYearSelect();
+renderRealCharts();renderRecent();renderComposite();
+buildControls();renderBaseline();runSim();
+</script>
+</body>
+</html>
